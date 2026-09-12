@@ -1,0 +1,24 @@
+[
+  {
+    "id": "venue_1",
+    "name": "Coffee Shop Downtown",
+    "latitude": 42.3314,
+    "longitude": -83.0458,
+    "radius": 50.0,
+    "beaconIdentity": {
+      "name": "AABBCCDDEEFF0011AABB",
+      "instance": "112233445566"
+    }
+  },
+  {
+    "id": "venue_2",
+    "name": "Library",
+    "latitude": 42.3400,
+    "longitude": -83.0600,
+    "radius": 40.0,
+    "beaconIdentity": {
+      "name": "AABBCCDDEEFF0011AACC",
+      "instance": "112233445577"
+    }
+  }
+]
