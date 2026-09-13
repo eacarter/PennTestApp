@@ -34,6 +34,7 @@ the json file will be below.
 observe that the app shows that you are within the bounds of the geofence. Combined with your
 beacon from above, you should also see, proximity and rssi
 
-<img width="800" height="1280" alt="Screen_Recording_20260913_111836_PennTestApp-ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/c831c54e-01dc-489f-a723-506b6ad172c9" />
+
+
 
 
