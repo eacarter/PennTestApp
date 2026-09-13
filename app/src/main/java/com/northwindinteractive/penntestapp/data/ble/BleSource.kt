@@ -25,8 +25,6 @@ class BleSource @Inject constructor(
 ): BleImpl{
     override fun scan(venue: Venue): Flow<BeaconReading> = flow {
 
-        Log.d("BleSource", "scan() flow started for venue=${venue.id}")
-
         if (checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
             emit(BeaconReading.bleUnavailable)
             return@flow
@@ -42,9 +40,7 @@ class BleSource @Inject constructor(
         val scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 val rssi = result.rssi
-                Log.d("BleSource", "onScanResult: device=${result.device.address}, rssi=${result.rssi}")
                 val matched = checkIfMatchesVenue(result, venue)
-                Log.d("BleSource", "matched=$matched")
                 if (matched) {
                     resultChannel.trySend(
                         BeaconReading.Detected(
@@ -66,7 +62,6 @@ class BleSource @Inject constructor(
             .build()
 
         bluetoothLeScanner.startScan(emptyList(), settings, scanCallback)
-        Log.d("BleSource", "startScan() called, scanner=$bluetoothLeScanner")
 
         try {
             for (reading in resultChannel) {
