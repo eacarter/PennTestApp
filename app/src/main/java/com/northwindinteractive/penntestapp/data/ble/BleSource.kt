@@ -25,12 +25,26 @@ class BleSource @Inject constructor(
 ): BleImpl{
     override fun scan(venue: Venue): Flow<BeaconReading> = flow {
 
+        Log.d("BleSource", "scan() flow started for venue=${venue.id}")
+
+        if (checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            emit(BeaconReading.bleUnavailable)
+            return@flow
+        }
+
+        if (bluetoothLeScanner == null) {
+            emit(BeaconReading.bleUnavailable)
+            return@flow
+        }
+
         val resultChannel = Channel<BeaconReading>(Channel.UNLIMITED)
 
         val scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 val rssi = result.rssi
+                Log.d("BleSource", "onScanResult: device=${result.device.address}, rssi=${result.rssi}")
                 val matched = checkIfMatchesVenue(result, venue)
+                Log.d("BleSource", "matched=$matched")
                 if (matched) {
                     resultChannel.trySend(
                         BeaconReading.Detected(
@@ -51,24 +65,33 @@ class BleSource @Inject constructor(
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .build()
 
-        val filterList = mutableListOf<ScanFilter>()
-
-        bluetoothLeScanner?.startScan(filterList, settings, scanCallback)
-
-        if (checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Unit
-        }
+        bluetoothLeScanner.startScan(emptyList(), settings, scanCallback)
+        Log.d("BleSource", "startScan() called, scanner=$bluetoothLeScanner")
 
         try {
             for (reading in resultChannel) {
                 emit(reading)
             }
         } finally {
-           bluetoothLeScanner?.stopScan(scanCallback)
+            bluetoothLeScanner.stopScan(scanCallback)
         }
     }
 
-    private fun checkIfMatchesVenue(result: ScanResult, venue: Venue): Boolean { return true
+    private fun checkIfMatchesVenue(result: ScanResult, venue: Venue): Boolean {
+        val serviceData = result.scanRecord?.getServiceData(
+            ParcelUuid(UUID.fromString("0000FEAA-0000-1000-8000-00805F9B34FB"))
+        ) ?: return false
+
+        if (serviceData.size < 17 || serviceData[0] != 0x00.toByte()) return false
+
+        val namespace = serviceData.copyOfRange(1, 11).toHex()
+        val instance = serviceData.copyOfRange(11, 17).toHex()
+
+        return namespace.equals(venue.beaconIdentity.name, ignoreCase = true) &&
+                instance.equals(venue.beaconIdentity.instance, ignoreCase = true)
     }
+
+    private fun ByteArray.toHex(): String =
+        joinToString("") { "%02X".format(it) }
 
 }

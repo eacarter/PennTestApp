@@ -1,28 +1,32 @@
 package com.northwindinteractive.penntestapp.domain
 
+import android.util.Log
 import com.northwindinteractive.penntestapp.data.ble.BeaconReading
 import com.northwindinteractive.penntestapp.data.ble.BleSource
 import com.northwindinteractive.penntestapp.data.geo.GeofenceSource
 import com.northwindinteractive.penntestapp.domain.model.Venue
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+@Singleton
 class VenueStateMachine @Inject constructor(
     private val geofenceSource: GeofenceSource,
     private val bleSource: BleSource,
     private val scope: CoroutineScope
 ) {
     private val _state = MutableStateFlow<VenueState>(VenueState.Outside)
-    val state: StateFlow<VenueState> = _state
+    var state: StateFlow<VenueState> = _state
 
     private val _log = MutableStateFlow<List<LogEntry>>(emptyList())
-    val log: StateFlow<List<LogEntry>> = _log
+    var log: StateFlow<List<LogEntry>> = _log
 
     private var scanJob: Job? = null
     private var lostTimeoutJob: Job? = null
@@ -44,7 +48,7 @@ class VenueStateMachine @Inject constructor(
         startScanning(venue)
     }
 
-    fun onGeofenceExit(venueId: String){
+    fun onGeofenceExit(venueId: String): Boolean{
         val current = _state.value
         val currentVenueId = when (current) {
             is VenueState.Inside -> current.venue.id
@@ -54,22 +58,23 @@ class VenueStateMachine @Inject constructor(
 
         if (currentVenueId != venueId) {
             addLog("Ignored EXIT for $venueId (not currently inside that venue)")
-            return
+            return false
         }
 
         addLog("Exited venue $venueId")
         stopScanning()
         _state.value = VenueState.Outside
+        return true
     }
 
 
     private fun startScanning(venue: Venue){
         scanJob?.cancel()
-        scanJob = scope.launch {
+        scanJob = scope.launch(Dispatchers.Default) {
             bleSource.scan(venue).collect { read ->
                 when(read){
                     is BeaconReading.Detected -> handleReading(venue, read)
-                    is BeaconReading.bleUnavailable -> addLog("Ble Unavailible")
+                    is BeaconReading.bleUnavailable -> addLog("Ble Unavailable")
                 }
             }
         }
@@ -100,7 +105,7 @@ class VenueStateMachine @Inject constructor(
     private fun resetLostTimeout(venue: Venue) {
         lostTimeoutJob?.cancel()
         lostTimeoutJob = scope.launch {
-            delay(10_0000.milliseconds)
+            delay(10000.milliseconds)
             addLog("Beacon lost for ${venue.name}")
             rssiWindow.clear()
             _state.value = VenueState.Inside(venue)
@@ -115,6 +120,6 @@ class VenueStateMachine @Inject constructor(
     }
 
     private fun addLog(message: String) {
-        _log.value = _log.value + LogEntry(System.currentTimeMillis(), message)
+        _log.value += LogEntry(System.currentTimeMillis(), message)
     }
 }

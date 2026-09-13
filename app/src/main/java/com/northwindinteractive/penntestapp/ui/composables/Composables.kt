@@ -128,10 +128,8 @@ fun VenueCheckInScreen(viewModel: VenueViewModel = hiltViewModel()) {
 
 @Composable
 fun VenueStateDisplay(state: VenueState){
-    Log.d("VenueStateDisplay", "Recomposing with state=$state")
-
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp)
+        modifier = Modifier.fillMaxWidth().padding(64.dp)
     ) {
         Text(
             text = "Current State",

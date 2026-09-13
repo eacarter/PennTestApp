@@ -56,16 +56,14 @@ class VenueScanningService : Service() {
 
             ACTION_EXIT -> {
                 Log.d("VSS", "EXIT branch")
-//                startForeground(NOTIFICATION_ID, buildNotification("Exit Venue"))
-                if (venueId != null) {
-                    venueStateMachine.onGeofenceExit(venueId)
+                val actuallyExited = venueId?.let { venueStateMachine.onGeofenceExit(it) } ?: false
+                if (actuallyExited) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
                 }
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
             }
 
             else -> {
-//                startForeground(NOTIFICATION_ID, buildNotification("Exit Venue"))
                 Log.d("VSS", "unknown action")
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -82,7 +80,6 @@ class VenueScanningService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Staus: $venueName")
             .setContentText("Scanning beacons near by")
-//            .setSmallIcon()
             .setOngoing(true)
             .build()
     }
