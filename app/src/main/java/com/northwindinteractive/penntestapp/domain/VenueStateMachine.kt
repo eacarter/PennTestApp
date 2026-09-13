@@ -1,9 +1,8 @@
 package com.northwindinteractive.penntestapp.domain
 
-import android.util.Log
 import com.northwindinteractive.penntestapp.data.ble.BeaconReading
-import com.northwindinteractive.penntestapp.data.ble.BleSource
-import com.northwindinteractive.penntestapp.data.geo.GeofenceSource
+import com.northwindinteractive.penntestapp.data.ble.BleImpl
+import com.northwindinteractive.penntestapp.data.geo.GeofenceImpl
 import com.northwindinteractive.penntestapp.domain.model.Venue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,8 +17,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class VenueStateMachine @Inject constructor(
-    private val geofenceSource: GeofenceSource,
-    private val bleSource: BleSource,
+    private val geofenceSource: GeofenceImpl,
+    private val bleSource: BleImpl,
     private val scope: CoroutineScope
 ) {
     private val _state = MutableStateFlow<VenueState>(VenueState.Outside)
@@ -70,7 +69,7 @@ class VenueStateMachine @Inject constructor(
 
     private fun startScanning(venue: Venue){
         scanJob?.cancel()
-        scanJob = scope.launch(Dispatchers.Default) {
+        scanJob = scope.launch {
             bleSource.scan(venue).collect { read ->
                 when(read){
                     is BeaconReading.Detected -> handleReading(venue, read)
